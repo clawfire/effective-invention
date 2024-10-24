@@ -26,7 +26,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
     pdfParse(resumeBuffer, {
         normalizeWhitespace: true,
     }).then((data) => {
-        console.log('✅ Reading ${data.numpages} pages from ${resumeFile.originalname}`);')
+        console.log(`✅ Reading ${data.numpages} pages from ${resumeFile.originalname}`)
         const resumeText = data.text;
         // Send the extracted text to OpenAI for analysis
         // create the OpenAI API client
