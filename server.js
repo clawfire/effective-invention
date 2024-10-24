@@ -5,6 +5,8 @@ const multer = require('multer');
 const path = require('path');
 const OpenAIApi = require('openai');
 const pdfParse = require('pdf-parse');
+const z = require('zod');
+const { zodResponseFormat } = require('openai/helpers/zod');
 
 const app = express();
 const upload = multer({ dest: 'analyse/' });
@@ -26,7 +28,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
     pdfParse(resumeBuffer, {
         normalizeWhitespace: true,
     }).then((data) => {
-        console.log('✅ Reading ${data.numpages} pages from ${resumeFile.originalname}`);')
+        console.log(`✅ Reading ${data.numpages} pages from ${resumeFile.originalname}`)
         const resumeText = data.text;
         // Send the extracted text to OpenAI for analysis
         // create the OpenAI API client
@@ -36,40 +38,15 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         const prompt = 'You are a HR specialist assistant. Analyze the following resume document to extract all ESCO/ISCO-08 occupations and skills explicitly mentioned. The output should follow the given JSON schema structure: 1. Occupations: Identify ESCO/ISCO-08 occupations explicitly mentioned in the document. For each occupation, extract its English name and any skills with their English name explicitly linked to that occupation. 2. Skills: Identify any ESCO skills mentioned in the resume that are not explicitly linked to a specific occupation and list them separately with their English names.';
 
         // Define the expected JSON response schema for the analysis results
-        const responseSchema = {
-            type: 'json_schema',
-            json_schema: {
-                occupations: {
-                    type: 'array',
-                    description: 'ESCO/ISCO-08 occupations explicitly mentioned in the resume.',
-                    items: {
-                        type: 'object',
-                        properties: {
-                            title: {
-                                type: 'string',
-                                description: 'English name of the occupation'
-                            },
-                            skills: {
-                                type: 'array',
-                                description: 'ESCO skills explicitly mentioned and linked to this occupation.',
-                                items: {
-                                    type: 'string',
-                                    description: 'English name of the skill'
-                                },
-                            },
-                        },
-                    },
-                },
-                skills: {
-                    type: 'array',
-                    description: 'ESCO skills explicitly mentioned and linked in the resume but not linked to a particular occupation.',
-                    items: {
-                        type: 'string',
-                        description: 'English name of the skill'
-                    },
-                },
-            },
-        };
+        const responseSchema = z.object({
+            occupations: z.array(z.object({
+                name: z.string().describe('English name of the occupation'),
+                skills: z.array(z.string().describe('English name of the skill'))
+                    .describe('ESCO skills explicitly mentioned and linked to this occupation.')
+            })).describe('ESCO/ISCO-08 occupations explicitly mentioned in the resume.'),
+            skills: z.array(z.string().describe('English name of the skill'))
+                .describe('ESCO skills explicitly mentioned but not linked to a particular occupation.')
+        })
 
         // Make the OpenAI API call to analyze the resume and return the results in JSON format
         openAI.beta.chat.completions.parse({
@@ -83,11 +60,11 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
                     ]
                 }
             ],
-            response_format: responseSchema,
+            response_format: zodResponseFormat(responseSchema, 'resume'),
         })
             .then((response) => {
-                const analysisResults = JSON.parse(response.data.choices[0].text);
-                res.json(analysisResults);
+                console.log('response.data', JSON.stringify(response))
+                res.json(response);
             })
             .catch((error) => {
                 console.error('❌ Error analyzing resume:', error);
