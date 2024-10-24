@@ -1,23 +1,34 @@
+require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const { Configuration, OpenAIApi } = require('openai');
+// Initialize the OpenAI API client with the provided API key
+const configuration = new Configuration({
+    apiKey: process.env['OPENAI_API_KEY'],
+});
 
 const app = express();
 const upload = multer({ dest: 'analyse/' });
 
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, 'public')));
+console.log(process.env['OPENAI_API_KEY'] ? '❌ API key is set' : '✅ API key is not set');
 
 // Set up the openAPI endpoint, upload the resume file to OpenAI,
 // constraining the JSON format response and include a custom prompt.
 app.post('/analyze', upload.single('resume'), (req, res) => {
     const resumeFile = req.file; // Uploaded resume file
+    if (!resumeFile) {
+        console.error('❌ No resume file uploaded.');
+        return res.status(400).send('No resume file uploaded.');
+    }
 
-    const openAIKey = process.env.OPENAI_API_KEY;
-    const openAIClient = require('@openai/api-client').Client.create({ apiKey: openAIKey });
+    const openAI = new OpenAIApi(configuration);
+    console.log(`Analyzing resume: ${resumeFile.originalname}`);
+    const prompt = 'You are a HR specialist assistant. Analyze the following resume document to extract all ESCO/ISCO-08 occupations and skills explicitly mentioned. The output should follow the given JSON schema structure: 1. Occupations: Identify ESCO/ISCO-08 occupations explicitly mentioned in the document. For each occupation, extract its English name and any skills with their English name explicitly linked to that occupation. 2. Skills: Identify any ESCO skills mentioned in the resume that are not explicitly linked to a specific occupation and list them separately with their English names.';
 
-    const prompt = 'Analyze the following resume document to extract all ESCO/ISCO-08 occupations and skills explicitly mentioned. The output should follow the given JSON schema structure: 1. Occupations: Identify ESCO/ISCO-08 occupations explicitly mentioned in the document. For each occupation, extract its English name and any skills with their English name explicitly linked to that occupation. 2. Skills: Identify any ESCO skills mentioned in the resume that are not explicitly linked to a specific occupation and list them separately with their English names.';
-
+    // Prepare the input data for the OpenAI API call
     const formData = {
         prompt,
         file: {
@@ -26,7 +37,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
             contentType: resumeFile.mimetype,
         },
     };
-
+    // Define the expected JSON response schema for the analysis results
     const responseSchema = {
         type: 'object',
         properties: {
@@ -62,9 +73,11 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         },
     };
 
-    openAIClient.createCompletion({
+    // Make the OpenAI API call to analyze the resume and return the results in JSON format
+    openAI.createCompletion({
         engine: 'gpt-4o-mini', // Use the GPT-4o mini model
         files: formData,
+        prompt: prompt,
         maxTokens: 1000,
         response_schema: responseSchema,
     })
