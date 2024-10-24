@@ -30,12 +30,15 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
     }).then((data) => {
         console.log(`✅ Reading ${data.numpages} pages from ${resumeFile.originalname}`)
         const resumeText = data.text;
+        //save the extracted text to a file for debugging purposes
+        fs.writeFileSync('analyse/resume_text.txt', resumeText);
+
         // Send the extracted text to OpenAI for analysis
         // create the OpenAI API client
         const openAI = new OpenAIApi({
             apiKey: process.env['OPENAI_API_KEY'],
         });
-        const prompt = 'You are a HR specialist assistant. Analyze the following resume document to extract all ESCO/ISCO-08 occupations and skills explicitly mentioned. The output should follow the given JSON schema structure: 1. Occupations: Identify ESCO/ISCO-08 occupations explicitly mentioned in the document. For each occupation, extract its English name and any skills with their English name explicitly linked to that occupation. 2. Skills: Identify any ESCO skills mentioned in the resume that are not explicitly linked to a specific occupation and list them separately with their English names.';
+        const prompt = "You are an HR specialist assistant. Analyze the following resume and extract occupations and skills as follows: 1. Extract all occupations listed in the resume. For each occupation, identify the closest corresponding occupation title in the ESCO database (in English). If the exact title isn't available, use the closest match based on the description. 2. For each occupation, extract any listed skills directly related to that occupation. For each skill, find the closest matching skill in the ESCO database (in English). If a skill is expressed as a compound (e.g., 'project management and leadership'), break it into individual skills based on ESCO categories (e.g., 'project management' and 'leadership'). 3. Any skills not tied to a specific occupation should be classified as 'General Skills' and follow the same ESCO matching process. 4. Ensure all extracted occupations and skills are translated into English, if necessary, before matching to ESCO. Use professional, context-appropriate translations."
 
         // Define the expected JSON response schema for the analysis results
         const responseSchema = z.object({
