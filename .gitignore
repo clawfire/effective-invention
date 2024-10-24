@@ -175,3 +175,6 @@ Temporary Items
 .apdisk
 
 # End of https://www.toptal.com/developers/gitignore/api/osx
+
+# Download ESCO CSVs from https://esco.ec.europa.eu/en/use-esco/download
+/data/esco
