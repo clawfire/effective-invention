@@ -16,7 +16,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
     const openAIKey = process.env.OPENAI_API_KEY;
     const openAIClient = require('@openai/api-client').Client.create({ apiKey: openAIKey });
 
-    const prompt = 'You are a HR specialist assistant. You are procesing resume that we are providing and return list of experience title and skills (for each experience), matching ESCO standard';
+    const prompt = 'Analyze the following resume document to extract all ESCO/ISCO-08 occupations and skills explicitly mentioned. The output should follow the given JSON schema structure: 1. Occupations: Identify ESCO/ISCO-08 occupations explicitly mentioned in the document. For each occupation, extract its English name and any skills with their English name explicitly linked to that occupation. 2. Skills: Identify any ESCO skills mentioned in the resume that are not explicitly linked to a specific occupation and list them separately with their English names.';
 
     const formData = {
         prompt,
@@ -30,17 +30,33 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
     const responseSchema = {
         type: 'object',
         properties: {
-            experience: {
+            occupations: {
                 type: 'array',
+                description: 'ESCO/ISCO-08 occupations explicitly mentioned in the resume.',
                 items: {
                     type: 'object',
                     properties: {
-                        title: { type: 'string' },
+                        title: {
+                            type: 'string',
+                            description: 'English name of the occupation'
+                        },
                         skills: {
                             type: 'array',
-                            items: { type: 'string' },
+                            description: 'ESCO skills explicitly mentioned and linked to this occupation.',
+                            items: {
+                                type: 'string',
+                                description: 'English name of the skill'
+                            },
                         },
                     },
+                },
+            },
+            skills: {
+                type: 'array',
+                description: 'ESCO skills explicitly mentioned and linked in the resume but not linked to a particular occupation.',
+                items: {
+                    type: 'string',
+                    description: 'English name of the skill'
                 },
             },
         },
