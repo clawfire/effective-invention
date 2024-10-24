@@ -132,6 +132,11 @@
                     var occupationsContainer = document.querySelector('.occupations');
                     var skillsContainer = document.querySelector('.skills');
 
+                    // clear the containers
+                    occupationsContainer.innerHTML = '';
+                    skillsContainer.innerHTML = '';
+
+                    // Add the extracted data to the containers
                     occupations.forEach(function (occupation) {
                         var occupationElement = document.createElement('li');
                         occupationElement.classList.add('occupation');
