@@ -9,6 +9,9 @@ const z = require('zod')
 const { URLSearchParams } = require('url')
 const { zodResponseFormat } = require('openai/helpers/zod')
 
+const escoApiBaseUrl = 'https://ec.europa.eu/esco/api'
+const escoApiUserAgent = 'https://github.com/clawfire/effective-invention'
+
 dotenv.config()
 
 const app = express()
@@ -84,35 +87,73 @@ app.listen(PORT, async () => {
     console.log(`Server is running on port ${PORT}`)
 })
 
-const lookupOccupationResultSchema = z.object({
-    _embedded: z.object({
-        results: z.array(z.object({
-            uri: z.string()
-        })).min(1)
+/**
+ * Fuzzy search an occupation URI by the given keyword.
+ * @param {string} keywords
+ */
+const lookupOccupation = async (keywords) => {
+    const result = await requestEscoApi({
+        path: '/search',
+        query: {
+            text: keywords,
+            full: 'false',
+            type: 'occupation',
+            limit: '1'
+        },
+        schema: z.object({
+            _embedded: z.object({
+                results: z.array(z.object({
+                    uri: z.string()
+                })).min(1)
+            })
+        })
     })
-})
+
+    return result._embedded.results[0].uri
+}
 
 /**
- * Fuzzy search an occupation by the given keyword.
- * @param {string} occupationName
+ * Fuzzy search a skill URI by the given keyword.
+ * @param {string} keywords
  */
-const lookupOccupation = async (occupationName) => {
-    const query = new URLSearchParams({
-        text: occupationName,
-        full: 'false',
-        type: 'occupation',
-        limit: '1'
+const lookupSkill = async (keywords) => {
+    const result = await requestEscoApi({
+        path: '/search',
+        query: {
+            text: keywords,
+            full: 'false',
+            type: 'skill',
+            limit: '1'
+        },
+        schema: z.object({
+            _embedded: z.object({
+                results: z.array(z.object({
+                    uri: z.string()
+                })).min(1)
+            })
+        })
     })
-    const url = 'https://ec.europa.eu/esco/api/search?' + query.toString()
+
+    return result._embedded.results[0].uri
+}
+
+const requestEscoApi = async (query) => {
+    let url = escoApiBaseUrl + query.path
+    if (query.query !== undefined) {
+        const queryPart = new URLSearchParams(query.query).toString()
+        if (queryPart !== '') {
+            url += '?' + queryPart
+        }
+    }
 
     let response = null
     try {
         response = await fetch(url, {
-            method: 'GET',
+            method: query.method ?? 'GET',
             headers: [
                 ['Accept', 'application/json'],
                 ['Accept-Language', 'en'],
-                ['User-Agent', 'effective-invention']
+                ['User-Agent', escoApiUserAgent]
             ]
         })
     } catch (error) {
@@ -124,14 +165,13 @@ const lookupOccupation = async (occupationName) => {
         return null
     }
 
-    let result
     try {
         const rawResult = await response.json()
-        result = await lookupOccupationResultSchema.parseAsync(rawResult)
+        return query.schema === undefined
+            ? rawResult
+            : query.schema.parse(rawResult)
     } catch (error) {
         console.log('lookupOccupation: Unexpected JSON result', error)
         return null
     }
-
-    return result._embedded.results[0].uri
 }
