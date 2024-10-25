@@ -70,7 +70,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         })
             .then((response) => {
                 console.log('response.data', JSON.stringify(response))
-                res.json(response)
+                res.json(response.choices[0].message.content);
             })
             .catch((error) => {
                 console.error('❌ Error analyzing resume:', error)

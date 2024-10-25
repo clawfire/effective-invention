@@ -62,6 +62,20 @@
             background-color: #45a049;
         }
 
+        /* Result Section */
+        .result {
+            margin-top: 20px;
+            grid-column: 1 / -1;
+        }
+
+        .occupations, .skills {
+            margin-bottom: 10px;
+        }
+
+        .occupation, .skill {
+            margin-bottom: 5px;
+        }
+
         /* Responsive */
         @media screen and (max-width: 600px) {
            .container {
@@ -73,10 +87,71 @@
 <body>
     <div class="container">
         <h1 class="title">Effective Invention</h1>
-        <form class="form" action="/analyze" method="post" enctype="multipart/form-data">
+        <form id="analyzeForm" class="form" action="/analyze" method="post" enctype="multipart/form-data">
             <input type="file" name="resume" accept=".pdf,.docx">
             <button type="submit" class="">🪄 DO BETTER</button>
         </form>
     </div>
+    <div class="container">
+        <div class="results">
+            <h2>Occupations</h2>
+            <ul class="occupations">
+                <!-- Display occupations here -->
+            </ul>
+            <h2>Skills</h2>
+            <ul class="skills">
+                <!-- Display skills here -->
+            </ul>
+    </div>
+    <script>
+        // Add event listener to the form submit button
+        document.getElementById('analyzeForm').addEventListener('submit', function (event) {
+            event.preventDefault(); // Prevent form submission
+
+            // Create FormData object and append the file data
+            var formData = new FormData(this);
+
+            console.log("🪄 Working our magic ...")
+            // Make AJAX request to the /analyze endpoint
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+                .then(function (response) {
+                    console.log('✅ Got answer from the system')
+                    return response.json();
+                })
+                .then(function (data) {
+                    data = JSON.parse(data);
+                    console.log(data)
+                    // Extract occupations and skills from the response
+                    var occupations = data.occupations;
+                    var skills = data.skills;
+
+                    // Display the extracted data on the page
+                    var occupationsContainer = document.querySelector('.occupations');
+                    var skillsContainer = document.querySelector('.skills');
+
+                    occupations.forEach(function (occupation) {
+                        var occupationElement = document.createElement('li');
+                        occupationElement.classList.add('occupation');
+                        occupationElement.textContent = occupation.name;
+
+                        occupationsContainer.appendChild(occupationElement);
+                    });
+
+                    skills.forEach(function (skill) {
+                        var skillElement = document.createElement('li');
+                        skillElement.classList.add('skill');
+                        skillElement.textContent = skill;
+
+                        skillsContainer.appendChild(skillElement);
+                    });
+                })
+                .catch(function (error) {
+                    console.error('Error:', error);
+                });
+        });
+    </script>
 </body>
 </html>
