@@ -75,7 +75,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
             response_format: zodResponseFormat(responseSchema, 'resume'),
         })
             .then((response) => {
-                console.log('response.data', JSON.stringify(response))
+                console.log('✅ Got response from openAI')
                 res.json(response.choices[0].message.content);
             })
             .catch((error) => {

@@ -14,12 +14,13 @@
             <div class="cell">
                 <h1 class="text-center">SkillMatch Pro</h1>
                 <p>This little tool will use <span class="label success"><i class="fa-solid fa-sparkles"></i> OpenAI GPT 4o-mini</span> model to extract your occupations and generate a skill list for each of them, followwing the <abbr title="European Skills, Competences and Occupations">ESCO</abbr> nomenclature. Then, we'll request <span class="label warning"><i class="fa-solid fa-brain"></i> ESCO database</span> to find out which skills may be missing from your resume and will offer you to add them to it.</p>
+                <p>We're currently accepting <span class="label secondary">.pdf files</span> only.</p>
             </div>
             <div class="cell">
                 <form id="analyzeForm" class="form text-center" action="/analyze" method="post" enctype="multipart/form-data">
                     <label for="FileUpload" class="button secondary">select your resume</label>
-                    <input type="file" id="FileUpload" class="show-for-sr" name="resume" accept=".pdf,.doc,.docx">
-                    <button type="submit" class="button primary">🪄 Do Better</button>
+                    <input type="file" id="FileUpload" class="show-for-sr" name="resume" accept=".pdf">
+                    <button type="submit" id="submitButton" class="button primary" disabled>🪄 Do Better</button>
                 </form>
             </div>
         </div>
@@ -44,6 +45,23 @@
             </div>
     </div>
     <script>
+        // Add event listener to the file input field
+        document.getElementById('FileUpload').addEventListener('change', function () {
+            enableSubmitButton();
+        });
+
+        // Function to enable the submit button
+        function enableSubmitButton() {
+            var fileInput = document.getElementById('FileUpload');
+            var submitButton = document.getElementById('submitButton');
+
+            if (fileInput.files.length > 0) {
+                submitButton.disabled = false; // Enable the submit button
+            } else {
+                submitButton.disabled = true; // Disable the submit button
+            }
+        }
+
         // Add event listener to the form submit button
         document.getElementById('analyzeForm').addEventListener('submit', function (event) {
             event.preventDefault(); // Prevent form submission
@@ -64,6 +82,14 @@
                 .then(function (data) {
                     data = JSON.parse(data);
                     console.log(data)
+                    // Clear the selected file from the file input field
+                    var fileInput = document.getElementById('FileUpload');
+                    fileInput.value = '';
+                    // dispatch change event for this field
+                    var event = new Event('change', { bubbles: true});
+                    fileInput.dispatchEvent(event);
+
+
                     // Extract occupations and skills from the response
                     var occupations = data.occupations;
                     var skills = data.skills;
