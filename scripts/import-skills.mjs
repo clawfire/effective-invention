@@ -5,34 +5,43 @@ import fs from 'node:fs'
 const skillLevelProps = [
   {
     uri: 'Level 0 URI',
-    parentUri: null,
-    preferredTerm: 'Level 0 preferred term'
+    broaderUri: null,
+    label: 'Level 0 preferred term',
+    description: 'Description'
   },
   {
     uri: 'Level 1 URI',
-    parentUri: 'Level 0 URI',
-    preferredTerm: 'Level 1 preferred term'
+    broaderUri: 'Level 0 URI',
+    label: 'Level 1 preferred term',
+    description: 'Description'
   },
   {
     uri: 'Level 2 URI',
-    parentUri: 'Level 1 URI',
-    preferredTerm: 'Level 2 preferred term'
+    broaderUri: 'Level 1 URI',
+    label: 'Level 2 preferred term',
+    description: 'Description'
   },
   {
     uri: 'Level 3 URI',
-    parentUri: 'Level 2 URI',
-    preferredTerm: 'Level 3 preferred term'
+    broaderUri: 'Level 2 URI',
+    label: 'Level 3 preferred term',
+    description: 'Description'
   }
 ]
 
 /**
- * From `data/esco/skillsHierarchy_en.csv` compile `data/skills.json`.
+ * Compile `data/skills.json` lookup data from the following ESCO files:
+ * - `data/esco/skills_en.csv`
+ * - `data/esco/skillsHierarchy_en.csv`
+ * - `data/esco/broaderRelationsSkillPillar_en.csv`
  */
 const main = async () => {
+  const skills = {}
+
+  // Load skill hierarchy.
   const skillsHierarchyCsv = fs.readFileSync('data/esco/skillsHierarchy_en.csv')
   const skillsHierarchyRows = await neatCsv(skillsHierarchyCsv)
 
-  const skills = {}
   for (const row of skillsHierarchyRows) {
 
     for (const skillProps of skillLevelProps) {
@@ -57,9 +66,34 @@ const main = async () => {
     }
   }
 
-  const skillsCsv = fs.readFileSync('data/esco/skillsHierarchy_en.csv')
+  // Load skills
+  const skillsCsv = fs.readFileSync('data/esco/skills_en.csv')
   const skillsRows = await neatCsv(skillsCsv)
 
+  for (const row of skillsRows) {
+    skills[row.conceptUri] = {
+      uri: row.conceptUri,
+      broaderUri: null,
+      label: row.preferredLabel,
+      description: row.description
+    }
+  }
+
+  // Load skills broader relations
+  const skillsRelationsCsv =
+    fs.readFileSync('data/esco/broaderRelationsSkillPillar_en.csv')
+  const skillsRelationsRows = await neatCsv(skillsRelationsCsv)
+
+  for (const row of skillsRelationsRows) {
+    if (skills[row.conceptUri] !== undefined) {
+      skills[row.conceptUri] = {
+        ...skills[row.conceptUri],
+        broaderUri: row.broaderUri
+      }
+    }
+  }
+
+  // Export the data
   fs.writeFileSync('data/skills.json', JSON.stringify(skills))
 }
 

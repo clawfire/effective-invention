@@ -9,6 +9,9 @@ const z = require('zod')
 const { URLSearchParams } = require('url')
 const { zodResponseFormat } = require('openai/helpers/zod')
 
+const skills = require('./data/skills.json')
+const occupations = require('./data/occupations.json')
+
 const escoApiBaseUrl = 'https://ec.europa.eu/esco/api'
 const escoApiUserAgent = 'https://github.com/clawfire/effective-invention'
 
@@ -87,15 +90,15 @@ app.listen(PORT, async () => {
     console.log(`Server is running on port ${PORT}`)
 })
 
-/**
- * Fuzzy search an occupation URI by the given keyword.
- * @param {string} keywords
- */
-const lookupOccupation = async (keywords) => {
+const findOccupation = async (keywordsOrUri) => {
+    if (keywordsOrUri in occupations) {
+        return occupations[keywordsOrUri]
+    }
+
     const result = await requestEscoApi({
         path: '/search',
         query: {
-            text: keywords,
+            text: keywordsOrUri,
             full: 'false',
             type: 'occupation',
             limit: '1'
@@ -109,18 +112,18 @@ const lookupOccupation = async (keywords) => {
         })
     })
 
-    return result._embedded.results[0].uri
+    return occupations[result._embedded.results[0].uri] ?? null
 }
 
-/**
- * Fuzzy search a skill URI by the given keyword.
- * @param {string} keywords
- */
-const lookupSkill = async (keywords) => {
+const findSkill = async (keywordsOrUri) => {
+    if (keywordsOrUri in skills) {
+        return skills[keywordsOrUri]
+    }
+
     const result = await requestEscoApi({
         path: '/search',
         query: {
-            text: keywords,
+            text: keywordsOrUri,
             full: 'false',
             type: 'skill',
             limit: '1'
@@ -134,7 +137,7 @@ const lookupSkill = async (keywords) => {
         })
     })
 
-    return result._embedded.results[0].uri
+    return skills[result._embedded.results[0].uri] ?? null
 }
 
 const requestEscoApi = async (query) => {

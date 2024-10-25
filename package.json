@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
+    "import:occupations": "node scripts/import-occupations.mjs",
+    "import:skills": "node scripts/import-skills.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
