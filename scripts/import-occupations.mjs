@@ -52,7 +52,6 @@ const main = async () => {
       occupation.skills
         .filter(skill => skill.priority < (numGoodSkills >= 5 ? 7 : 8))
         .sort((a, b) => a.priority - b.priority)
-        .slice(0, numGoodSkills >= 10 ? 10 : -1)
   }
 
   // Export the data

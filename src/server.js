@@ -1,19 +1,14 @@
-const dotenv = require('dotenv')
 const OpenAIApi = require('openai')
+const dotenv = require('dotenv')
 const express = require('express')
 const fs = require('fs')
 const multer = require('multer')
 const path = require('path')
 const pdfParse = require('pdf-parse')
 const z = require('zod')
-const { URLSearchParams } = require('url')
 const { zodResponseFormat } = require('openai/helpers/zod')
-
-const skills = require('../data/skills.json')
-const occupations = require('../data/occupations.json')
-
-const escoApiBaseUrl = 'https://ec.europa.eu/esco/api'
-const escoApiUserAgent = 'https://github.com/clawfire/effective-invention'
+const { findSkill } = require('./skills')
+const { findOccupation } = require('./occupations')
 
 dotenv.config()
 
@@ -89,13 +84,15 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         for (const occupation of resume.occupations) {
             occupation.matchedOccupation = await findOccupation(occupation.name)
 
-            for (let i = 0; i < occupation.matchedOccupation.skills.length; i++) {
-                const skill =
-                    await findSkill(occupation.matchedOccupation.skills[i].uri)
-                occupation.matchedOccupation.skills[i] = {
-                    ...occupation.matchedOccupation.skills[i],
-                    // Resolve skill URI to skill facts
-                    ...(skill ?? {})
+            if (occupation.matchedOccupation !== null) {
+                for (let i = 0; i < occupation.matchedOccupation.skills.length; i++) {
+                    const skill =
+                        await findSkill(occupation.matchedOccupation.skills[i].uri)
+                    occupation.matchedOccupation.skills[i] = {
+                        ...occupation.matchedOccupation.skills[i],
+                        // Resolve skill URI to skill facts
+                        ...(skill ?? {})
+                    }
                 }
             }
 
@@ -103,6 +100,21 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
                 occupation.skills.map(skillName => ({ name: skillName }))
             for (const skill of occupation.skills) {
                 skill.matchedSkill = await findSkill(skill.name)
+
+                // Fallback priority, if no occupation-skill relation exists
+                skill.priority = 8
+                skill.numVacancies = 0
+                skill.pctVacencies = 0
+
+                // Lookup stats for this occupation-skill relation
+                if (skill.matchedSkill !== null && occupation.matchedOccupation !== null) {
+                    const matchedOccupationSkill =
+                        occupation.matchedOccupation.skills.find(occupationSkill =>
+                            occupationSkill.uri === skill.matchedSkill.uri)
+                    if (matchedOccupationSkill !== undefined) {
+                        skill.matchedSkill = matchedOccupationSkill
+                    }
+                }
             }
         }
 
@@ -123,109 +135,3 @@ const PORT = process.env.PORT ?? 3000;
 app.listen(PORT, async () => {
     console.log(`Server is running on port ${PORT}`)
 })
-
-const findOccupation = async (keywordsOrUri) => {
-    if (keywordsOrUri in occupations) {
-        return occupations[keywordsOrUri]
-    }
-
-    const result = await requestEscoApi({
-        path: '/search',
-        query: {
-            text: keywordsOrUri,
-            full: 'false',
-            type: 'occupation',
-            limit: '1'
-        },
-        schema: z.object({
-            _embedded: z.object({
-                results: z.array(z.object({
-                    uri: z.string()
-                }))
-            })
-        })
-    })
-
-    if (result === null) {
-        return null
-    }
-
-    if (result._embedded.results.length === 0) {
-        return null
-    }
-
-    return occupations[result._embedded.results[0].uri] ?? null
-}
-
-const findSkill = async (keywordsOrUri) => {
-    if (keywordsOrUri in skills) {
-        return skills[keywordsOrUri]
-    }
-
-    const result = await requestEscoApi({
-        path: '/search',
-        query: {
-            text: keywordsOrUri,
-            full: 'false',
-            type: 'skill',
-            limit: '1'
-        },
-        schema: z.object({
-            _embedded: z.object({
-                results: z.array(z.object({
-                    uri: z.string()
-                }))
-            })
-        })
-    })
-
-    if (result === null) {
-        return null
-    }
-
-    if (result._embedded.results.length === 0) {
-        return null
-    }
-
-    return skills[result._embedded.results[0].uri] ?? null
-}
-
-const requestEscoApi = async (query) => {
-    let url = escoApiBaseUrl + query.path
-    if (query.query !== undefined) {
-        const queryPart = new URLSearchParams(query.query).toString()
-        if (queryPart !== '') {
-            url += '?' + queryPart
-        }
-    }
-
-    let response = null
-    try {
-        response = await fetch(url, {
-            method: query.method ?? 'GET',
-            headers: [
-                ['Accept', 'application/json'],
-                ['Accept-Language', 'en'],
-                ['User-Agent', escoApiUserAgent]
-            ]
-        })
-    } catch (error) {
-        console.error('lookupOccupation: Fetch error', url, error)
-        return null
-    }
-
-    if (response === null || !response.ok) {
-        console.log('lookupOccupation: Unexpected response', response?.status)
-        return null
-    }
-
-    try {
-        const rawResult = await response.json()
-        return query.schema === undefined
-            ? rawResult
-            : query.schema.parse(rawResult)
-    } catch (error) {
-        console.log('lookupOccupation: Unexpected JSON result', error)
-        return null
-    }
-}
