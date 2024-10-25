@@ -4,8 +4,13 @@ import fs from 'node:fs'
 
 const skillLevelProps = [
   {
-    uri: 'Level 1 URI',
+    uri: 'Level 0 URI',
     parentUri: null,
+    preferredTerm: 'Level 0 preferred term'
+  },
+  {
+    uri: 'Level 1 URI',
+    parentUri: 'Level 0 URI',
     preferredTerm: 'Level 1 preferred term'
   },
   {
@@ -24,11 +29,11 @@ const skillLevelProps = [
  * From `data/esco/skillsHierarchy_en.csv` compile `data/skills.json`.
  */
 const main = async () => {
-  const csv = fs.readFileSync('data/esco/skillsHierarchy_en.csv')
-  const rows = await neatCsv(csv)
+  const skillsHierarchyCsv = fs.readFileSync('data/esco/skillsHierarchy_en.csv')
+  const skillsHierarchyRows = await neatCsv(skillsHierarchyCsv)
 
   const skills = {}
-  for (const row of rows) {
+  for (const row of skillsHierarchyRows) {
 
     for (const skillProps of skillLevelProps) {
       const skill = {}
@@ -44,10 +49,16 @@ const main = async () => {
       }
 
       if (!missingProps) {
-        skills[skill.uri] = skill
+        skills[skill.uri] = {
+          ...skills[skill.uri],
+          ...skill
+        }
       }
     }
   }
+
+  const skillsCsv = fs.readFileSync('data/esco/skillsHierarchy_en.csv')
+  const skillsRows = await neatCsv(skillsCsv)
 
   fs.writeFileSync('data/skills.json', JSON.stringify(skills))
 }

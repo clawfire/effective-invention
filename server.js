@@ -1,29 +1,32 @@
-require('dotenv').config();
-const fs = require('fs');
-const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const OpenAIApi = require('openai');
-const pdfParse = require('pdf-parse');
-const z = require('zod');
-const { zodResponseFormat } = require('openai/helpers/zod');
+const dotenv = require('dotenv')
+const OpenAIApi = require('openai')
+const express = require('express')
+const fs = require('fs')
+const multer = require('multer')
+const path = require('path')
+const pdfParse = require('pdf-parse')
+const z = require('zod')
+const { URLSearchParams } = require('url')
+const { zodResponseFormat } = require('openai/helpers/zod')
 
-const app = express();
-const upload = multer({ dest: 'analyse/' });
+dotenv.config()
+
+const app = express()
+const upload = multer({ dest: 'analyse/' })
 
 // Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));
-console.log(process.env['OPENAI_API_KEY'] ? '✅ API key is set' : '❌ API key is not set');
+app.use(express.static(path.join(__dirname, 'public')))
+console.log(process.env['OPENAI_API_KEY'] ? '✅ API key is set' : '❌ API key is not set')
 
 // Set up the openAPI endpoint, upload the resume file to OpenAI,
 // constraining the JSON format response and include a custom prompt.
 app.post('/analyze', upload.single('resume'), (req, res) => {
     const resumeFile = req.file; // Uploaded resume file
     if (!resumeFile) {
-        console.error('❌ No resume file uploaded.');
-        return res.status(400).send('No resume file uploaded.');
+        console.error('❌ No resume file uploaded.')
+        return res.status(400).send('No resume file uploaded.')
     }
-    let resumeBuffer = fs.readFileSync(resumeFile.path);
+    let resumeBuffer = fs.readFileSync(resumeFile.path)
     // Use PDF parsing to extract text from the resume
     pdfParse(resumeBuffer, {
         normalizeWhitespace: true,
@@ -31,13 +34,13 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         console.log(`✅ Reading ${data.numpages} pages from ${resumeFile.originalname}`)
         const resumeText = data.text;
         //save the extracted text to a file for debugging purposes
-        fs.writeFileSync('analyse/resume_text.txt', resumeText);
+        fs.writeFileSync('analyse/resume_text.txt', resumeText)
 
         // Send the extracted text to OpenAI for analysis
         // create the OpenAI API client
         const openAI = new OpenAIApi({
             apiKey: process.env['OPENAI_API_KEY'],
-        });
+        })
         const prompt = "You are an HR specialist assistant. Analyze the following resume and extract occupations and skills as follows: 1. Extract all occupations listed in the resume. For each occupation, identify the closest corresponding occupation title in the ESCO database (in English). If the exact title isn't available, use the closest match based on the description. 2. For each occupation, extract any listed skills directly related to that occupation. For each skill, find the closest matching skill in the ESCO database (in English). If a skill is expressed as a compound (e.g., 'project management and leadership') or in a list format (e.g., 'programming languages: Python, Java'), break it into individual skills based on ESCO categories. 3. Any skills not tied to a specific occupation should be classified as 'General Skills' and follow the same ESCO matching process. 4. Ensure all extracted occupations and skills are translated into English, if necessary, before matching to ESCO. Use professional, context-appropriate translations."
 
         // Define the expected JSON response schema for the analysis results
@@ -67,16 +70,68 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         })
             .then((response) => {
                 console.log('response.data', JSON.stringify(response))
-                res.json(response);
+                res.json(response)
             })
             .catch((error) => {
-                console.error('❌ Error analyzing resume:', error);
-                res.status(500).send('Error analyzing resume');
-            });
+                console.error('❌ Error analyzing resume:', error)
+                res.status(500).send('Error analyzing resume')
+            })
     })
-});
+})
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+const PORT = process.env.PORT ?? 3000;
+app.listen(PORT, async () => {
+    console.log(`Server is running on port ${PORT}`)
+})
+
+const lookupOccupationResultSchema = z.object({
+    _embedded: z.object({
+        results: z.array(z.object({
+            uri: z.string()
+        })).min(1)
+    })
+})
+
+/**
+ * Fuzzy search an occupation by the given keyword.
+ * @param {string} occupationName
+ */
+const lookupOccupation = async (occupationName) => {
+    const query = new URLSearchParams({
+        text: occupationName,
+        full: 'false',
+        type: 'occupation',
+        limit: '1'
+    })
+    const url = 'https://ec.europa.eu/esco/api/search?' + query.toString()
+
+    let response = null
+    try {
+        response = await fetch(url, {
+            method: 'GET',
+            headers: [
+                ['Accept', 'application/json'],
+                ['Accept-Language', 'en'],
+                ['User-Agent', 'effective-invention']
+            ]
+        })
+    } catch (error) {
+        console.error('lookupOccupation: Fetch error', url, error)
+    }
+
+    if (response === null || !response.ok) {
+        console.log('lookupOccupation: Unexpected response', response?.status)
+        return null
+    }
+
+    let result
+    try {
+        const rawResult = await response.json()
+        result = await lookupOccupationResultSchema.parseAsync(rawResult)
+    } catch (error) {
+        console.log('lookupOccupation: Unexpected JSON result', error)
+        return null
+    }
+
+    return result._embedded.results[0].uri
+}
