@@ -63,6 +63,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         // Make the OpenAI API call to analyze the resume and return the results in JSON format
         openAI.beta.chat.completions.parse({
             model: 'gpt-4o-mini', // Use the GPT-4o mini model
+            temperature:0,
             messages: [
                 {
                     role: "user",
