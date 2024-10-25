@@ -36,7 +36,7 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
     // Use PDF parsing to extract text from the resume
     pdfParse(resumeBuffer, {
         normalizeWhitespace: true,
-    }).then((data) => {
+    }).then(async (data) => {
         console.log(`✅ Reading ${data.numpages} pages from ${resumeFile.originalname}`)
         const resumeText = data.text;
         //save the extracted text to a file for debugging purposes
@@ -61,33 +61,61 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         })
 
         // Make the OpenAI API call to analyze the resume and return the results in JSON format
-        openAI.beta.chat.completions.parse({
-            model: 'gpt-4o-mini', // Use the GPT-4o mini model
-            temperature:0,
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        { type: "text", text: prompt },
-                        { type: "text", text: `Resume data: ${resumeText}` }
-                    ]
+        let aiResponse
+
+        try {
+            aiResponse = await openAI.beta.chat.completions.parse({
+                model: 'gpt-4o-mini', // Use the GPT-4o mini model
+                temperature: 0.3,
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: prompt },
+                            { type: "text", text: `Resume data: ${resumeText}` }
+                        ]
+                    }
+                ],
+                response_format: zodResponseFormat(responseSchema, 'resume'),
+            })
+        } catch (error) {
+            console.error('❌ Error analyzing resume:', error)
+            res.status(500).send('Error analyzing resume')
+        }
+
+        console.log('✅ Got response from openAI')
+        const resume = JSON.parse(aiResponse.choices[0].message.content)
+
+        for (const occupation of resume.occupations) {
+            occupation.matchedOccupation = await findOccupation(occupation.name)
+
+            for (let i = 0; i < occupation.matchedOccupation.skills.length; i++) {
+                const skill =
+                    await findSkill(occupation.matchedOccupation.skills[i].uri)
+                occupation.matchedOccupation.skills[i] = {
+                    ...occupation.matchedOccupation.skills[i],
+                    // Resolve skill URI to skill facts
+                    ...(skill ?? {})
                 }
-            ],
-            response_format: zodResponseFormat(responseSchema, 'resume'),
-        })
-            .then((response) => {
-                console.log('✅ Got response from openAI')
-                res.json(response.choices[0].message.content);
+            }
 
-                // remove the uploaded file from the hard drive
-                fs.unlinkSync(resumeFile.path)
-                console.log(`✅ Removed ${resumeFile.originalname} from the hard drive`)
+            occupation.skills =
+                occupation.skills.map(skillName => ({ name: skillName }))
+            for (const skill of occupation.skills) {
+                skill.matchedSkill = await findSkill(skill.name)
+            }
+        }
 
-            })
-            .catch((error) => {
-                console.error('❌ Error analyzing resume:', error)
-                res.status(500).send('Error analyzing resume')
-            })
+        resume.skills = resume.skills.map(skillName => ({ name: skillName }))
+        for (const skill of resume.skills) {
+            skill.matchedSkill = await findSkill(skill.name)
+        }
+
+        res.json(resume)
+
+        // Remove the uploaded file from the hard drive
+        fs.unlinkSync(resumeFile.path)
+        console.log(`✅ Removed ${resumeFile.originalname} from the hard drive`)
     })
 })
 
@@ -113,10 +141,18 @@ const findOccupation = async (keywordsOrUri) => {
             _embedded: z.object({
                 results: z.array(z.object({
                     uri: z.string()
-                })).min(1)
+                }))
             })
         })
     })
+
+    if (result === null) {
+        return null
+    }
+
+    if (result._embedded.results.length === 0) {
+        return null
+    }
 
     return occupations[result._embedded.results[0].uri] ?? null
 }
@@ -138,10 +174,18 @@ const findSkill = async (keywordsOrUri) => {
             _embedded: z.object({
                 results: z.array(z.object({
                     uri: z.string()
-                })).min(1)
+                }))
             })
         })
     })
+
+    if (result === null) {
+        return null
+    }
+
+    if (result._embedded.results.length === 0) {
+        return null
+    }
 
     return skills[result._embedded.results[0].uri] ?? null
 }
@@ -167,6 +211,7 @@ const requestEscoApi = async (query) => {
         })
     } catch (error) {
         console.error('lookupOccupation: Fetch error', url, error)
+        return null
     }
 
     if (response === null || !response.ok) {
