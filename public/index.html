@@ -44,6 +44,7 @@
                 </ul>
             </div>
     </div>
+    <script src="/skillRendering.js"></script>
     <script>
         // Add event listener to the file input field
         document.getElementById('FileUpload').addEventListener('change', function () {
@@ -96,30 +97,6 @@
                     var occupationsContainer = document.querySelector('#occupations');
                     var skillsContainer = document.querySelector('#skills');
 
-                    // Build the AI top pic label
-                    var AISkills = document.createElement('span');
-                    AISkills.classList.add('label');
-                    AISkills.classList.add('success');
-                    AISkills.textContent = 'AI ';
-
-                    var AISparkle = document.createElement('i');
-                    AISparkle.classList.add('fa-solid');
-                    AISparkle.classList.add('fa-sparkles');
-
-                    AISkills.appendChild(AISparkle);
-
-                    //Build the ESCO top pic label
-                    var ESCOSkills = document.createElement('span');
-                    ESCOSkills.classList.add('label');
-                    ESCOSkills.classList.add('warning');
-                    ESCOSkills.textContent = 'ESCO ';
-
-                    var ESCOBrain = document.createElement('i');
-                    ESCOBrain.classList.add('fa-solid');
-                    ESCOBrain.classList.add('fa-brain');
-
-                    ESCOSkills.appendChild(ESCOBrain);
-
                     // clear the containers
                     occupationsContainer.innerHTML = '';
                     skillsContainer.innerHTML = '';
@@ -137,12 +114,7 @@
 
                         if (occupation.skills){
                             occupation.skills.forEach(function (skill) {
-                                var skillElement = document.createElement('li');
-                                skillElement.classList.add('skill');
-                                skillElement.textContent = skill.name + " ";
-                                skillElement.appendChild(AISkills.cloneNode(true));
-
-                                skillsList.appendChild(skillElement);
+                                skillsList.appendChild(renderSkill(skill, 'AI'));
                             });
                         }
 
