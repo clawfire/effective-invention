@@ -82,40 +82,47 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
         const resume = JSON.parse(aiResponse.choices[0].message.content)
 
         for (const occupation of resume.occupations) {
-            occupation.matchedOccupation = await findOccupation(occupation.name)
-
-            if (occupation.matchedOccupation !== null) {
-                for (let i = 0; i < occupation.matchedOccupation.skills.length; i++) {
-                    const skill =
-                        await findSkill(occupation.matchedOccupation.skills[i].uri)
-                    occupation.matchedOccupation.skills[i] = {
-                        ...occupation.matchedOccupation.skills[i],
-                        // Resolve skill URI to skill facts
-                        ...(skill ?? {})
-                    }
-                }
-            }
-
             occupation.skills =
                 occupation.skills.map(skillName => ({ name: skillName }))
             for (const skill of occupation.skills) {
                 skill.matchedSkill = await findSkill(skill.name)
 
-                // Fallback priority, if no occupation-skill relation exists
-                skill.priority = 8
-                skill.numVacancies = 0
-                skill.pctVacencies = 0
+                // Priority for a non-matched skill
+                skill.priority = skill.matchedSkill !== null ? 8 : null
+            }
 
-                // Lookup stats for this occupation-skill relation
-                if (skill.matchedSkill !== null && occupation.matchedOccupation !== null) {
-                    const matchedOccupationSkill =
-                        occupation.matchedOccupation.skills.find(occupationSkill =>
-                            occupationSkill.uri === skill.matchedSkill.uri)
-                    if (matchedOccupationSkill !== undefined) {
-                        skill.matchedSkill = matchedOccupationSkill
+            occupation.matchedOccupation = await findOccupation(occupation.name)
+            if (occupation.matchedOccupation !== null) {
+                for (let i = 0; i < occupation.matchedOccupation.skills.length; i++) {
+                    const skill = await findSkill(occupation.matchedOccupation.skills[i].uri)
+                    const occupationSkill = occupation.matchedOccupation.skills[i] = {
+                        ...occupation.matchedOccupation.skills[i],
+                        // Resolve skill URI to skill facts
+                        ...(skill ?? {})
+                    }
+                    occupation.matchedOccupation.skills[i] = occupationSkill
+
+                    // See if the skill was mentioned on the resume
+                    const mentionedSkill = occupation.skills.find(skill =>
+                        skill.matchedSkill?.uri === occupationSkill.uri)
+
+                    if (mentionedSkill === undefined) {
+                        // If not, maybe recommend it
+                        occupation.skills.push({
+                            name: null,
+                            matchedSkill: occupationSkill,
+                            priority: occupationSkill.priority
+                        })
+                    } else {
+                        // If so, populate it with priority data
+                        mentionedSkill.matchedSkill = occupationSkill
+                        mentionedSkill.priority = occupationSkill.priority
                     }
                 }
             }
+
+            // Sort by priority ASC
+            occupation.skills = occupation.skills.sort((a, b) => a.priority - b.priority)
         }
 
         resume.skills = resume.skills.map(skillName => ({ name: skillName }))
