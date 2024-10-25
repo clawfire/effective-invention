@@ -2,110 +2,45 @@
 <html>
 <head>
     <title>Effective Invention</title>
-    <style>
-        /* Reset CSS */
-        html, body, h1, h2, h3, h4, h5, h6, p, ul, ol {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    <!-- Compressed CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/foundation-sites@6.9.0/dist/css/foundation.min.css"
+        crossorigin="anonymous">
 
-        /* Grid Container */
-        .container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            grid-gap: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Big Title */
-        .title {
-            text-align: center;
-            font-size: 3em;
-            margin-bottom: 20px;
-            grid-column: 1 / -1; /* Span the entire grid column */
-
-        }
-
-        /* Form */
-        .form {
-            display: flex;
-            justify-content: center;
-            flex-direction: column; /* Stack elements vertically */
-            grid-column: 1 / -1; /* Span the entire grid column */
-        }
-
-        /* Input Fields */
-        input[type=file] {
-            width: 100%;
-            padding: 12px 20px;
-            margin: 8px 0;
-            display: inline-block;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button[type=submit] {
-            background-color: #4CAF50;
-            color: white;
-            padding: 14px 20px;
-            margin: 8px 0;
-            border: none;
-            cursor: pointer;
-            width: 100%;
-            border-radius: 4px;
-        }
-
-        button[type=submit]:hover {
-            background-color: #45a049;
-        }
-
-        /* Result Section */
-        .result {
-            margin-top: 20px;
-            grid-column: 1 / -1;
-        }
-
-        .occupations, .skills {
-            margin-bottom: 10px;
-            grid-column: 1 / -2;
-        }
-
-        .occupation, .skill {
-            margin-bottom: 5px;
-        }
-
-        /* Responsive */
-        @media screen and (max-width: 600px) {
-           .container {
-                grid-template-columns: 1fr;
-            }
-            .occupations, .skills{
-                grid-column: 1 / -1;
-            }
-        }
-    </style>
+    <script src="https://kit.fontawesome.com/87f449fd05.js" crossorigin="anonymous"></script>
 </head>
 <body>
-    <div class="container">
-        <h1 class="title">Effective Invention</h1>
-        <form id="analyzeForm" class="form" action="/analyze" method="post" enctype="multipart/form-data">
-            <input type="file" name="resume" accept=".pdf,.docx">
-            <button type="submit" class="">🪄 DO BETTER</button>
-        </form>
+    <div class="grid-container">
+        <div class="grid-x grid-margin-x">
+            <div class="cell">
+                <h1 class="text-center">Effective Invention</h1>
+            </div>
+            <div class="cell">
+                <form id="analyzeForm" class="form text-center" action="/analyze" method="post" enctype="multipart/form-data">
+                    <label for="FileUpload" class="button secondary">select your resume</label>
+                    <input type="file" id="FileUpload" class="show-for-sr" name="resume" accept=".pdf,.doc,.docx">
+                    <button type="submit" class="button primary">🪄 Do Better</button>
+                </form>
+            </div>
+        </div>
     </div>
-    <div class="container">
-        <div class="results">
-            <h2>Occupations</h2>
-            <ul class="occupations">
-                <!-- Display occupations here -->
-            </ul>
-            <h2>Skills</h2>
-            <ul class="skills">
-                <!-- Display skills here -->
-            </ul>
+    <div class="grid-container">
+        <div id="results" class="grid-x grid-margin-x">
+            <div class="cell large-12">
+                <h2 class="text-center">Your resume data</h2>
+            </div>
+            <div class="cell large-6">
+                <h3>Occupations</h3>
+
+                <ul id="occupations">
+                    <!-- Display occupations here -->
+                </ul>
+            </div>
+            <div class="cell large-6">
+                <h3>Skills</h3>
+                <ul id="skills">
+                    <!-- Display skills here -->
+                </ul>
+            </div>
     </div>
     <script>
         // Add event listener to the form submit button
@@ -133,8 +68,32 @@
                     var skills = data.skills;
 
                     // Display the extracted data on the page
-                    var occupationsContainer = document.querySelector('.occupations');
-                    var skillsContainer = document.querySelector('.skills');
+                    var occupationsContainer = document.querySelector('#occupations');
+                    var skillsContainer = document.querySelector('#skills');
+
+                    // Build the AI top pic label
+                    var AISkills = document.createElement('span');
+                    AISkills.classList.add('label');
+                    AISkills.classList.add('success');
+                    AISkills.textContent = 'AI ';
+
+                    var AISparkle = document.createElement('i');
+                    AISparkle.classList.add('fa-solid');
+                    AISparkle.classList.add('fa-sparkles');
+
+                    AISkills.appendChild(AISparkle);
+
+                    //Build the ESCO top pic label
+                    var ESCOSkills = document.createElement('span');
+                    ESCOSkills.classList.add('label');
+                    ESCOSkills.classList.add('warning');
+                    ESCOSkills.textContent = 'ESCO ';
+
+                    var ESCOBrain = document.createElement('i');
+                    ESCOBrain.classList.add('fa-solid');
+                    ESCOBrain.classList.add('fa-brain');
+
+                    ESCOSkills.appendChild(ESCOBrain);
 
                     // clear the containers
                     occupationsContainer.innerHTML = '';
@@ -155,7 +114,8 @@
                             occupation.skills.forEach(function (skill) {
                                 var skillElement = document.createElement('li');
                                 skillElement.classList.add('skill');
-                                skillElement.textContent = skill;
+                                skillElement.textContent = skill + " ";
+                                skillElement.appendChild(AISkills.cloneNode(true));
 
                                 skillsList.appendChild(skillElement);
                             });
