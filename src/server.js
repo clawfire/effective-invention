@@ -9,8 +9,8 @@ const z = require('zod')
 const { URLSearchParams } = require('url')
 const { zodResponseFormat } = require('openai/helpers/zod')
 
-const skills = require('./data/skills.json')
-const occupations = require('./data/occupations.json')
+const skills = require('../data/skills.json')
+const occupations = require('../data/occupations.json')
 
 const escoApiBaseUrl = 'https://ec.europa.eu/esco/api'
 const escoApiUserAgent = 'https://github.com/clawfire/effective-invention'
@@ -21,7 +21,7 @@ const app = express()
 const upload = multer({ dest: 'analyse/' })
 
 // Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')))
+app.use(express.static(path.join(__dirname, '..', 'public')))
 console.log(process.env['OPENAI_API_KEY'] ? '✅ API key is set' : '❌ API key is not set')
 
 // Set up the openAPI endpoint, upload the resume file to OpenAI,

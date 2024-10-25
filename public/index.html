@@ -80,15 +80,13 @@
                     return response.json();
                 })
                 .then(function (data) {
-                    data = JSON.parse(data);
-                    console.log(data)
+                    console.log(data);
                     // Clear the selected file from the file input field
                     var fileInput = document.getElementById('FileUpload');
                     fileInput.value = '';
                     // dispatch change event for this field
                     var event = new Event('change', { bubbles: true});
                     fileInput.dispatchEvent(event);
-
 
                     // Extract occupations and skills from the response
                     var occupations = data.occupations;
@@ -141,13 +139,12 @@
                             occupation.skills.forEach(function (skill) {
                                 var skillElement = document.createElement('li');
                                 skillElement.classList.add('skill');
-                                skillElement.textContent = skill + " ";
+                                skillElement.textContent = skill.name + " ";
                                 skillElement.appendChild(AISkills.cloneNode(true));
 
                                 skillsList.appendChild(skillElement);
                             });
                         }
-
 
                         var skillsList = document.createElement('ul');
                         skillsList.classList.add('skills-list');
@@ -158,7 +155,7 @@
                     skills.forEach(function (skill) {
                         var skillElement = document.createElement('li');
                         skillElement.classList.add('skill');
-                        skillElement.textContent = skill;
+                        skillElement.textContent = skill.name;
 
                         skillsContainer.appendChild(skillElement);
                     });

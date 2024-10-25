@@ -2,9 +2,9 @@
   "name": "effective-invention",
   "version": "1.0.0",
   "description": "This will become, hopefully, an effective invention",
-  "main": "index.js",
+  "main": "src/server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node src/server.js",
     "import:occupations": "node scripts/import-occupations.mjs",
     "import:skills": "node scripts/import-skills.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -6,25 +6,25 @@ const skillLevelProps = [
   {
     uri: 'Level 0 URI',
     broaderUri: null,
-    label: 'Level 0 preferred term',
+    name: 'Level 0 preferred term',
     description: 'Description'
   },
   {
     uri: 'Level 1 URI',
     broaderUri: 'Level 0 URI',
-    label: 'Level 1 preferred term',
+    name: 'Level 1 preferred term',
     description: 'Description'
   },
   {
     uri: 'Level 2 URI',
     broaderUri: 'Level 1 URI',
-    label: 'Level 2 preferred term',
+    name: 'Level 2 preferred term',
     description: 'Description'
   },
   {
     uri: 'Level 3 URI',
     broaderUri: 'Level 2 URI',
-    label: 'Level 3 preferred term',
+    name: 'Level 3 preferred term',
     description: 'Description'
   }
 ]
@@ -74,7 +74,7 @@ const main = async () => {
     skills[row.conceptUri] = {
       uri: row.conceptUri,
       broaderUri: null,
-      label: row.preferredLabel,
+      name: row.preferredLabel,
       description: row.description
     }
   }

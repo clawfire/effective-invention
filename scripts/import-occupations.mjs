@@ -17,7 +17,7 @@ const main = async () => {
   for (const row of occupationRows) {
     occupations[row.conceptUri] = {
       uri: row.conceptUri,
-      label: row.preferredLabel,
+      name: row.preferredLabel,
       description: row.description,
       skills: [],
     }
