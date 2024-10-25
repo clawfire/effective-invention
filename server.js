@@ -77,6 +77,11 @@ app.post('/analyze', upload.single('resume'), (req, res) => {
             .then((response) => {
                 console.log('✅ Got response from openAI')
                 res.json(response.choices[0].message.content);
+
+                // remove the uploaded file from the hard drive
+                fs.unlinkSync(resumeFile.path)
+                console.log(`✅ Removed ${resumeFile.originalname} from the hard drive`)
+
             })
             .catch((error) => {
                 console.error('❌ Error analyzing resume:', error)
