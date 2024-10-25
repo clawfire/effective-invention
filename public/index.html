@@ -70,6 +70,7 @@
 
         .occupations, .skills {
             margin-bottom: 10px;
+            grid-column: 1 / -2;
         }
 
         .occupation, .skill {
@@ -80,6 +81,9 @@
         @media screen and (max-width: 600px) {
            .container {
                 grid-template-columns: 1fr;
+            }
+            .occupations, .skills{
+                grid-column: 1 / -1;
             }
         }
     </style>
@@ -141,6 +145,25 @@
                         var occupationElement = document.createElement('li');
                         occupationElement.classList.add('occupation');
                         occupationElement.textContent = occupation.name;
+
+                        var skillsList = document.createElement('ul');
+                        skillsList.classList.add('skills-list');
+
+                        occupationElement.appendChild(skillsList);
+
+                        if (occupation.skills){
+                            occupation.skills.forEach(function (skill) {
+                                var skillElement = document.createElement('li');
+                                skillElement.classList.add('skill');
+                                skillElement.textContent = skill;
+
+                                skillsList.appendChild(skillElement);
+                            });
+                        }
+
+
+                        var skillsList = document.createElement('ul');
+                        skillsList.classList.add('skills-list');
 
                         occupationsContainer.appendChild(occupationElement);
                     });
