@@ -30,7 +30,7 @@
   "homepage": "https://github.com/clawfire/effective-invention#readme",
   "dependencies": {
     "dotenv": "^17.0.0",
-    "express": "^5.0.0",
+    "express": "^5.2.0",
     "multer": "^2.0.2",
     "neat-csv": "^7.0.0",
     "openai": "^4.68.4",
